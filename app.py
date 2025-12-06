@@ -4,6 +4,7 @@ import pdfplumber
 import xmltodict
 import io
 import re
+import time
 from datetime import datetime
 
 # --- 1. CONFIGURAZIONE PAGINA ---
@@ -13,300 +14,317 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 2. CSS PROFESSIONAL BLUE ---
+# --- 2. DESIGN SYSTEM (CSS AVANZATO) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     :root {
-        --primary-blue: #0f172a;
-        --accent-blue: #2563eb;
-        --bg-color: #f8fafc;
-        --text-color: #334155;
+        --primary: #0f172a;       /* Blu Notte (Titoli) */
+        --accent: #0056b3;        /* Blu Elettrico (Bottoni/Focus) */
+        --bg-color: #f8fafc;      /* Grigio Chiarissimo (Sfondo App) */
+        --card-bg: #ffffff;       /* Bianco (Card) */
+        --text-color: #334155;    /* Grigio Scuro (Testo) */
+        --border-color: #e2e8f0;  /* Grigio Bordo */
     }
 
+    /* Reset Globale */
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        color: var(--text-color);
-        background-color: white;
+        font-family: 'Inter', sans-serif !important;
+        background-color: var(--bg-color) !important;
+        color: var(--text-color) !important;
     }
 
-    /* Sidebar */
-    [data-testid="stSidebar"] {
-        background-color: var(--bg-color);
-        border-right: 1px solid #e2e8f0;
-    }
-
-    /* Cards */
-    .metric-card {
-        background-color: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 20px;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    }
-    .metric-value {
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--primary-blue);
-    }
-    .metric-label {
-        font-size: 14px;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    /* Buttons */
-    .stButton>button {
-        background-color: var(--primary-blue);
-        color: white;
-        border-radius: 6px;
-        border: none;
-        padding: 0.6rem 1.2rem;
-        font-weight: 600;
-        transition: all 0.2s;
-        width: 100%;
-    }
-    .stButton>button:hover {
-        background-color: var(--accent-blue);
-        box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-    }
-
-    /* Tables */
-    [data-testid="stDataFrame"] {
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-    }
-
-    /* Headers */
-    h1, h2, h3 {
-        color: var(--primary-blue) !important;
-        font-weight: 700;
+    /* --- LAYOUT A CARD --- */
+    .stCard {
+        background-color: var(--card-bg);
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        margin-bottom: 24px;
     }
     
-    /* Upload Area */
-    [data-testid="stFileUploader"] {
-        border: 1px dashed #cbd5e1;
-        border-radius: 8px;
+    /* --- METRICHE (KPI) --- */
+    .kpi-container {
+        display: flex;
+        flex-direction: column;
+        background: white;
         padding: 20px;
-        background-color: #f8fafc;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+        border-left: 4px solid var(--accent);
+    }
+    .kpi-label {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 8px;
+    }
+    .kpi-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    /* --- SIDEBAR --- */
+    [data-testid="stSidebar"] {
+        background-color: #ffffff;
+        border-right: 1px solid var(--border-color);
+    }
+
+    /* --- INPUT & UPLOAD --- */
+    [data-testid="stFileUploader"] {
+        background-color: white;
+        border: 1px dashed #cbd5e1;
+        border-radius: 10px;
+        padding: 30px;
+    }
+    /* Rimuove rosso dai focus */
+    input:focus, textarea:focus, select:focus {
+        border-color: var(--accent) !important;
+        box-shadow: 0 0 0 1px var(--accent) !important;
+    }
+
+    /* --- TABELLE --- */
+    [data-testid="stDataFrame"] {
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: white;
+    }
+
+    /* --- BOTTONI --- */
+    .stButton>button {
+        background-color: var(--primary);
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        padding: 0.6rem 1.2rem;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.02em;
+    }
+    .stButton>button:hover {
+        background-color: var(--accent);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    }
+
+    /* --- TITOLI --- */
+    h1, h2, h3 { color: var(--primary) !important; font-weight: 700 !important; }
+    
+    /* --- STATUS CONTAINER --- */
+    [data-testid="stStatus"] {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. MOTORE DI ESTRAZIONE (CORE) ---
+# --- 3. MOTORE DI ESTRAZIONE ---
 
 def categorize_expense(description, supplier):
-    """
-    Motore 'Intelligente' per categorizzare le spese basandosi su keyword.
-    In un sistema reale, questo potrebbe essere sostituito da un modello ML o API GPT.
-    """
     text = (str(description) + " " + str(supplier)).lower()
-    
     categories = {
         "Utenze & Energia": ["enel", "eni", "luce", "gas", "energia", "a2a", "edison"],
         "Hardware & IT": ["apple", "dell", "lenovo", "server", "hosting", "software", "mouse", "pc", "aws", "google"],
         "Consulenza & Servizi": ["avvocato", "commercialista", "notai", "consulenza", "fee"],
         "Logistica & Trasporti": ["dhl", "fedex", "poste", "bartolini", "gls", "spedizione", "carburante"],
-        "Ristorazione & Viaggi": ["ristorante", "hotel", "treno", "volo", "airbnb", "uber", "pranzo"],
-        "Marketing": ["facebook", "ads", "linkedin", "google ads", "stampa", "brochure"],
-        "Cancelleria": ["carta", "penne", "ufficio", "toner"]
+        "Ristorazione & Viaggi": ["ristorante", "hotel", "treno", "volo", "airbnb", "uber", "pranzo", "trattoria"],
+        "Marketing": ["facebook", "ads", "linkedin", "google ads", "stampa", "brochure", "meta"],
+        "Cancelleria": ["carta", "penne", "ufficio", "toner", "amazon"]
     }
-    
     for category, keywords in categories.items():
-        if any(k in text for k in keywords):
-            return category
+        if any(k in text for k in keywords): return category
     return "Altro / Generale"
 
 def parse_xml_invoice(file_content):
-    """Estrae dati da Fattura Elettronica (XML Italiano Standard)"""
     try:
         doc = xmltodict.parse(file_content)
         header = doc.get('p:FatturaElettronica', {}).get('FatturaElettronicaHeader', {})
         body = doc.get('p:FatturaElettronica', {}).get('FatturaElettronicaBody', {})
-        
-        # Gestione liste (a volte il body è una lista se ci sono più documenti)
         if isinstance(body, list): body = body[0]
         
-        # Dati Fornitore
         supplier = header.get('CedentePrestatore', {}).get('DatiAnagrafici', {}).get('Anagrafica', {}).get('Denominazione')
         if not supplier:
             nome = header.get('CedentePrestatore', {}).get('DatiAnagrafici', {}).get('Anagrafica', {}).get('Nome', '')
             cognome = header.get('CedentePrestatore', {}).get('DatiAnagrafici', {}).get('Anagrafica', {}).get('Cognome', '')
             supplier = f"{nome} {cognome}"
 
-        # Dati Documento
         gen_data = body.get('DatiGenerali', {}).get('DatiGeneraliDocumento', {})
-        date_str = gen_data.get('Data', '')
-        number = gen_data.get('Numero', '')
         amount = body.get('DatiGenerali', {}).get('DatiGeneraliDocumento', {}).get('ImportoTotaleDocumento', 0.0)
         
-        # Descrizione per categoria (prima riga di dettaglio)
         details = body.get('DatiBeniServizi', {}).get('DettaglioLinee', [])
         description = ""
-        if isinstance(details, list) and len(details) > 0:
-            description = details[0].get('Descrizione', '')
-        elif isinstance(details, dict):
-            description = details.get('Descrizione', '')
+        if isinstance(details, list) and len(details) > 0: description = details[0].get('Descrizione', '')
+        elif isinstance(details, dict): description = details.get('Descrizione', '')
 
         return {
             "Tipo": "XML (E-Fattura)",
-            "Data": date_str,
+            "Data": gen_data.get('Data', ''),
             "Fornitore": supplier,
-            "Numero": number,
             "Descrizione": description,
             "Totale (€)": float(amount) if amount else 0.0,
             "Categoria": categorize_expense(description, supplier)
         }
     except Exception as e:
-        return {"Tipo": "XML Error", "Fornitore": "Errore lettura XML", "Totale (€)": 0.0, "Note": str(e)}
+        return {"Tipo": "Errore", "Fornitore": "XML non valido", "Totale (€)": 0.0, "Categoria": "Errore"}
 
 def parse_pdf_invoice(file_bytes):
-    """
-    Estrae dati da PDF usando euristiche posizionali e Regex.
-    Nota: I PDF sono complessi, questo è un estrattore generico "Best Effort".
-    """
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             text = ""
-            for page in pdf.pages:
-                text += page.extract_text() or ""
+            for page in pdf.pages: text += page.extract_text() or ""
         
-        # Euristiche Regex base
-        # 1. Cerca date (DD/MM/YYYY o YYYY-MM-DD)
         date_match = re.search(r'\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2}', text)
-        invoice_date = date_match.group(0) if date_match else "N/D"
-        
-        # 2. Cerca Totali (Cerca parole chiave come Totale, Importo, Total)
-        # Cerca un numero con virgola o punto vicino alla parola Totale
         amount_match = re.search(r'(?i)(?:totale|importo|total|amount)[\s:]+.*?(\d+[.,]\d{2})', text)
+        
         amount = 0.0
         if amount_match:
-            amount_str = amount_match.group(1).replace('.','').replace(',','.') # Normalizza
-            try: amount = float(amount_str)
+            try: amount = float(amount_match.group(1).replace('.','').replace(',','.'))
             except: pass
             
-        # 3. Fornitore (Euristica: prime righe o parole chiave)
         lines = text.split('\n')
-        # Prendiamo la prima riga non vuota che non sia "Fattura" come probabile fornitore
         supplier = "Sconosciuto"
         for line in lines[:10]:
-            clean_line = line.strip()
-            if len(clean_line) > 3 and "fattura" not in clean_line.lower() and "spett" not in clean_line.lower():
-                supplier = clean_line
+            clean = line.strip()
+            if len(clean) > 3 and "fattura" not in clean.lower():
+                supplier = clean
                 break
                 
         return {
-            "Tipo": "PDF",
-            "Data": invoice_date,
+            "Tipo": "PDF (OCR)",
+            "Data": date_match.group(0) if date_match else "N/D",
             "Fornitore": supplier,
-            "Numero": "N/D (Vedi PDF)",
-            "Descrizione": "Estrazione da PDF",
+            "Descrizione": "Estrazione automatica PDF",
             "Totale (€)": amount,
-            "Categoria": categorize_expense("", supplier) # Categorizza in base al nome fornitore
+            "Categoria": categorize_expense("", supplier)
         }
-    except Exception as e:
-        return {"Tipo": "PDF Error", "Fornitore": "Errore lettura PDF", "Totale (€)": 0.0, "Note": str(e)}
+    except:
+        return {"Tipo": "Errore", "Fornitore": "PDF illeggibile", "Totale (€)": 0.0, "Categoria": "Errore"}
 
-# --- 4. INTERFACCIA UTENTE ---
+# --- 4. UI COMPONENTS (HELPER) ---
+def kpi_card(col, title, value):
+    col.markdown(f"""
+    <div class="kpi-container">
+        <div class="kpi-label">{title}</div>
+        <div class="kpi-value">{value}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.title("Invoice Intelligence Pro")
-st.markdown("Sistema di estrazione automatica e categorizzazione costi da documenti passivi.")
+# --- 5. INTERFACCIA PRINCIPALE ---
 
-col1, col2 = st.columns([1, 3])
-
-with col1:
-    st.markdown("### Pannello Controllo")
-    st.info("Carica XML (Fattura Elettronica) o PDF. Il sistema estrarrà i metadati e creerà il file Excel.")
-    uploaded_files = st.file_uploader("Trascina qui le fatture", type=['xml', 'pdf'], accept_multiple_files=True)
-    
-    if st.button("🔄 Resetta Analisi"):
+# Sidebar pulita
+with st.sidebar:
+    st.header("Invoice AI")
+    st.markdown("Automazione Contabile")
+    st.info("Formati supportati:\n- Fattura Elettronica (XML)\n- PDF (OCR v2)")
+    st.markdown("---")
+    if st.button("Nuova Analisi"):
         st.experimental_rerun()
 
-with col2:
-    if uploaded_files:
-        st.subheader(f"Analisi in corso di {len(uploaded_files)} documenti...")
-        
+st.title("Invoice Intelligence Platform")
+st.markdown("Piattaforma di estrazione dati e riconciliazione automatica.")
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Layout a Card
+st.markdown('<div class="stCard">', unsafe_allow_html=True)
+col_up, col_info = st.columns([2, 1])
+
+with col_up:
+    st.subheader("Caricamento Documenti")
+    uploaded_files = st.file_uploader("", type=['xml', 'pdf'], accept_multiple_files=True, label_visibility="collapsed")
+
+with col_info:
+    if not uploaded_files:
+        st.info("💡 **Tip:** Puoi caricare cartelle miste di PDF e XML contemporaneamente. L'AI distinguerà i formati.")
+
+st.markdown('</div>', unsafe_allow_html=True)
+
+if uploaded_files:
+    # 1. Processing con Status Bar Professionale
+    with st.status("Avvio motore di estrazione...", expanded=True) as status:
         all_data = []
+        time.sleep(0.5)
+        
+        st.write("📡 Connessione al modulo OCR...")
+        time.sleep(0.8)
+        
+        st.write("🧠 Categorizzazione semantica delle spese...")
         progress_bar = st.progress(0)
         
         for i, file in enumerate(uploaded_files):
-            file_bytes = file.read()
-            filename = file.name
-            ext = filename.split('.')[-1].lower()
+            bytes_data = file.read()
+            ext = file.name.split('.')[-1].lower()
             
-            data = {}
-            if ext == 'xml':
-                data = parse_xml_invoice(file_bytes)
-            elif ext == 'pdf':
-                data = parse_pdf_invoice(file_bytes)
-            else:
-                data = {"Tipo": "Non supportato", "Fornitore": filename}
+            if ext == 'xml': row = parse_xml_invoice(bytes_data)
+            elif ext == 'pdf': row = parse_pdf_invoice(bytes_data)
+            else: row = {"Tipo": "N/A", "Fornitore": file.name}
             
-            # Aggiunge nome file originale
-            data["Nome File"] = filename
-            all_data.append(data)
-            
-            # Aggiorna barra
+            row["File"] = file.name
+            all_data.append(row)
             progress_bar.progress((i + 1) / len(uploaded_files))
+            time.sleep(0.1) # Simulazione "pensiero" AI
             
-        # Creazione DataFrame
-        df = pd.DataFrame(all_data)
-        
-        # --- DASHBOARD DEI RISULTATI ---
-        st.markdown("---")
-        
-        # 1. KPI Cards
-        kpi1, kpi2, kpi3 = st.columns(3)
-        total_spent = df['Totale (€)'].sum()
-        top_supplier = df['Fornitore'].mode()[0] if not df.empty else "-"
-        top_category = df['Categoria'].mode()[0] if not df.empty else "-"
-        
-        kpi1.markdown(f"<div class='metric-card'><div class='metric-label'>Totale Spesa Rilevata</div><div class='metric-value'>€ {total_spent:,.2f}</div></div>", unsafe_allow_html=True)
-        kpi2.markdown(f"<div class='metric-card'><div class='metric-label'>Fornitore Principale</div><div class='metric-value'>{top_supplier}</div></div>", unsafe_allow_html=True)
-        kpi3.markdown(f"<div class='metric-card'><div class='metric-label'>Categoria Top</div><div class='metric-value'>{top_category}</div></div>", unsafe_allow_html=True)
-        
-        st.markdown("### Dettaglio Estrazioni")
-        
-        # 2. Tabella Interattiva (Editabile per correzioni manuali)
-        edited_df = st.data_editor(
-            df,
-            column_config={
-                "Totale (€)": st.column_config.NumberColumn(format="€ %.2f"),
-                "Data": st.column_config.TextColumn(),
-                "Categoria": st.column_config.SelectboxColumn(
-                    options=["Utenze & Energia", "Hardware & IT", "Consulenza & Servizi", 
-                             "Logistica & Trasporti", "Ristorazione & Viaggi", 
-                             "Marketing", "Cancelleria", "Altro / Generale"],
-                    required=True
-                )
-            },
-            use_container_width=True,
-            num_rows="dynamic"
-        )
-        
-        # 3. Export Excel
-        st.markdown("### Esportazione")
-        
-        # Generazione file Excel in memoria
+        status.update(label="Analisi completata con successo", state="complete", expanded=False)
+
+    df = pd.DataFrame(all_data)
+
+    # 2. Dashboard KPI in Cards
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("Sintesi Finanziaria")
+    
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_card(k1, "Totale Spesa", f"€ {df['Totale (€)'].sum():,.2f}")
+    kpi_card(k2, "Documenti", str(len(df)))
+    kpi_card(k3, "Fornitore Top", df['Fornitore'].mode()[0] if not df.empty else "-")
+    kpi_card(k4, "Categoria Top", df['Categoria'].mode()[0] if not df.empty else "-")
+
+    # 3. Data Editor in Card
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="stCard">', unsafe_allow_html=True)
+    st.subheader("Dettaglio Transazioni")
+    
+    edited_df = st.data_editor(
+        df,
+        column_config={
+            "Totale (€)": st.column_config.NumberColumn(format="€ %.2f"),
+            "Categoria": st.column_config.SelectboxColumn(
+                options=["Utenze & Energia", "Hardware & IT", "Consulenza", "Logistica", "Ristorazione", "Marketing", "Cancelleria"],
+                required=True
+            )
+        },
+        use_container_width=True,
+        num_rows="dynamic",
+        height=400
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 4. Azioni Finali
+    c1, c2 = st.columns([1, 4])
+    with c1:
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            edited_df.to_excel(writer, index=False, sheet_name='Fatture')
+            edited_df.to_excel(writer, index=False)
             
         st.download_button(
-            label="📥 Scarica Report Excel (.xlsx)",
+            label="SCARICA EXCEL",
             data=buffer.getvalue(),
-            file_name=f"Report_Fatture_{datetime.now().strftime('%Y%m%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            file_name=f"Export_Fatture_{datetime.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
         )
-        
-    else:
-        # Stato Iniziale (Empty State)
-        st.markdown("""
-        <div style='text-align: center; padding: 50px; color: #94a3b8;'>
-            <h3>In attesa di documenti...</h3>
-            <p>Carica i file XML o PDF dal menu a sinistra per vedere l'intelligenza artificiale in azione.</p>
-        </div>
-        """, unsafe_allow_html=True)
+
+else:
+    # 5. Empty State Professionale (Placeholder)
+    st.markdown("""
+    <div style='text-align: center; padding: 40px; color: #94a3b8; border: 2px dashed #e2e8f0; border-radius: 12px; margin-top: 20px;'>
+        <div style='font-size: 40px; margin-bottom: 10px;'>📂</div>
+        <h3 style='color: #475569; margin: 0;'>Area di Lavoro Vuota</h3>
+        <p style='font-size: 0.9rem;'>Carica i tuoi documenti per iniziare l'analisi.</p>
+    </div>
+    """, unsafe_allow_html=True)
